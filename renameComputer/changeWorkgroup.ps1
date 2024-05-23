@@ -1,2 +1,2 @@
 # Change workgroup membership
-Rename-Computer -WorkgroupName "NewWorkgroupName" -Force -Restart
+Add-Computer -WorkgroupName "WORKGROUP" -Force -Restart
