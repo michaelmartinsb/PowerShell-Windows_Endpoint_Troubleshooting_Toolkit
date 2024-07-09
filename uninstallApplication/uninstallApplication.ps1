@@ -83,14 +83,18 @@ function Remove-AppxPackageByName {
     )
 
     $appxPackages = Get-AppxPackage -Name $appName
-    foreach ($package in $appxPackages) {
-        try {
-            Log-Message "Attempting to remove package: $($package.Name)"
-            Remove-AppxPackage -Package $package.PackageFullName -ErrorAction Stop
-            Log-Message "$($package.Name) has been successfully uninstalled."
-        } catch {
-            Log-Message "Failed to uninstall $($package.Name). Error: $_"
+    if ($appxPackages) {
+        foreach ($package in $appxPackages) {
+            try {
+                Log-Message "Attempting to remove package: $($package.Name)"
+                Remove-AppxPackage -Package $package.PackageFullName -ErrorAction Stop
+                Log-Message "$($package.Name) has been successfully uninstalled."
+            } catch {
+                Log-Message "Failed to uninstall $($package.Name). Error: $_"
+            }
         }
+    } else {
+        Log-Message "No Appx package found with the name $appName."
     }
 }
 
