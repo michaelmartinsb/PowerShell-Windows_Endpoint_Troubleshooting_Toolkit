@@ -3,6 +3,25 @@ param (
     [string]$AppName
 )
 
+# Define the log file path
+$logDirectory = "C:\temp"
+$logFile = "$logDirectory\uninstall_log.txt"
+
+# Ensure the log directory exists
+if (-Not (Test-Path $logDirectory)) {
+    New-Item -Path $logDirectory -ItemType Directory
+}
+
+# Log a message to the log file
+function Log-Message {
+    param (
+        [string]$message
+    )
+    Add-Content -Path $logFile -Value "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) - $message"
+}
+
+Log-Message "Starting uninstallation process for $AppName."
+
 # Define an array of registry paths to query for installed applications.
 $registryPaths = @(
     "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
@@ -11,38 +30,74 @@ $registryPaths = @(
     "HKCU:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
 )
 
-# Function to find the uninstall string for the specified application
-function Get-UninstallString {
+# Function to find the uninstall strings for the specified application
+function Get-UninstallStrings {
     param (
         [string]$appName,
         [string[]]$registryPaths
     )
     
+    $uninstallStrings = @()
     foreach ($path in $registryPaths) {
         if (Test-Path $path) {
-            $app = Get-ItemProperty $path\* |
-                   Where-Object { $_.DisplayName -eq $appName } |
-                   Select-Object -First 1
-            if ($app) {
-                return $app.UninstallString
+            $apps = Get-ItemProperty $path\* |
+                    Where-Object { $_.DisplayName -eq $appName }
+            foreach ($app in $apps) {
+                $uninstallStrings += $app.UninstallString
             }
         }
     }
-    return $null
+    return $uninstallStrings
 }
 
-# Get the uninstall string for the specified application
-$uninstallString = Get-UninstallString -appName $AppName -registryPaths $registryPaths
+# Function to attempt silent uninstallation with msiexec
+function Attempt-SilentUninstall {
+    param (
+        [string]$uninstallString
+    )
 
-if ($uninstallString) {
-    Write-Output "Found uninstall string: $uninstallString"
+    if ($uninstallString -match "msiexec") {
+        # Handle msiexec command specifically for uninstallation
+        $uninstallString = $uninstallString -replace "/I", "/X"
+        $silentUninstallString = "$uninstallString /quiet /qn"
+    } else {
+        # General case
+        $silentUninstallString = "$uninstallString /S"
+    }
+
     try {
-        # Execute the uninstall string
-        Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $uninstallString -Wait -NoNewWindow
-        Write-Output "$AppName has been successfully uninstalled."
+        Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $silentUninstallString -Wait -NoNewWindow -ErrorAction Stop
+        Log-Message "Silent uninstallation attempted with: $silentUninstallString"
+        return $true
     } catch {
-        Write-Error "Failed to uninstall $AppName. Error: $_"
+        Log-Message "Silent uninstallation failed: $_"
+        return $false
+    }
+}
+
+# Get the uninstall strings for the specified application
+$uninstallStrings = Get-UninstallStrings -appName $AppName -registryPaths $registryPaths
+
+if ($uninstallStrings.Count -gt 0) {
+    foreach ($uninstallString in $uninstallStrings) {
+        Log-Message "Found uninstall string: $uninstallString"
+        
+        $silentUninstallSucceeded = Attempt-SilentUninstall -uninstallString $uninstallString
+        
+        if (-Not $silentUninstallSucceeded) {
+            try {
+                # Execute the normal uninstall string
+                Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $uninstallString -Wait -NoNewWindow
+                Log-Message "$AppName has been successfully uninstalled."
+            } catch {
+                Log-Message "Failed to uninstall $AppName. Error: $_"
+            }
+        } else {
+            Log-Message "$AppName has been successfully uninstalled silently."
+        }
     }
 } else {
-    Write-Error "Uninstall string for $AppName not found."
+    Log-Message "Uninstall string for $AppName not found."
 }
+
+Log-Message "Uninstallation process for $AppName completed."
