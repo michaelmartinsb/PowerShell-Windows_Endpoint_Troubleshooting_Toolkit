@@ -41,9 +41,10 @@ function Get-UninstallStrings {
     foreach ($path in $registryPaths) {
         if (Test-Path $path) {
             $apps = Get-ItemProperty $path\* |
-                    Where-Object { $_.DisplayName -eq $appName }
+                    Where-Object { $_.DisplayName -ieq $appName }
             foreach ($app in $apps) {
                 $uninstallStrings += $app.UninstallString
+                Log-Message "Found uninstall string: $($app.DisplayName) - $($app.UninstallString)"
             }
         }
     }
@@ -75,12 +76,30 @@ function Attempt-SilentUninstall {
     }
 }
 
+# Function to uninstall .msix/.appx packages
+function Remove-AppxPackageByName {
+    param (
+        [string]$appName
+    )
+
+    $appxPackages = Get-AppxPackage -Name $appName
+    foreach ($package in $appxPackages) {
+        try {
+            Log-Message "Attempting to remove package: $($package.Name)"
+            Remove-AppxPackage -Package $package.PackageFullName -ErrorAction Stop
+            Log-Message "$($package.Name) has been successfully uninstalled."
+        } catch {
+            Log-Message "Failed to uninstall $($package.Name). Error: $_"
+        }
+    }
+}
+
 # Get the uninstall strings for the specified application
 $uninstallStrings = Get-UninstallStrings -appName $AppName -registryPaths $registryPaths
 
 if ($uninstallStrings.Count -gt 0) {
     foreach ($uninstallString in $uninstallStrings) {
-        Log-Message "Found uninstall string: $uninstallString"
+        Log-Message "Processing uninstall string: $uninstallString"
         
         $silentUninstallSucceeded = Attempt-SilentUninstall -uninstallString $uninstallString
         
@@ -97,7 +116,10 @@ if ($uninstallStrings.Count -gt 0) {
         }
     }
 } else {
-    Log-Message "Uninstall string for $AppName not found."
+    Log-Message "Uninstall string for $AppName not found in registry. Attempting to uninstall as an AppxPackage."
+
+    # Attempt to uninstall as an AppxPackage
+    Remove-AppxPackageByName -appName $AppName
 }
 
 Log-Message "Uninstallation process for $AppName completed."

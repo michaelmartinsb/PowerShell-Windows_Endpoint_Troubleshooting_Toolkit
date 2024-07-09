@@ -1,10 +1,11 @@
-### Updated README for Uninstall-Application PowerShell Script
+### README for Uninstall-Application PowerShell Script
 
-This PowerShell script, `Uninstall-Application.ps1`, allows you to uninstall a specified application by accepting the application name as a parameter. It searches common registry paths, including both machine-wide and user-specific locations, for the application's uninstall string and executes it to remove the application. The script handles multiple instances of the same application and attempts silent uninstallation using common flags.
+This PowerShell script, `Uninstall-Application.ps1`, allows you to uninstall a specified application by accepting the application name as a parameter. It searches common registry paths, including both machine-wide and user-specific locations, for the application's uninstall string and executes it to remove the application. The script also handles modern AppX/MSIX packages using PowerShell cmdlets. Both traditional and modern packages are uninstalled silently.
 
 #### Key Features:
-- **Handles Multiple Instances**: Uninstalls all instances of the specified application.
-- **Silent Uninstallation**: Attempts to uninstall applications silently using `/S` or `/quiet /qn` flags.
+- **Handles Both Traditional and Modern Packages**: Uninstalls applications installed via MSI and AppX/MSIX.
+- **Silent Uninstallation**: Ensures the process is silent, using common silent uninstallation flags and cmdlets.
+- **Case-Insensitive Matching**: Targets the specified application name without regard to character case.
 - **Comprehensive Logging**: Logs all actions and errors to a text file in `C:\temp`.
 
 ### Usage Instructions:
@@ -18,7 +19,7 @@ This PowerShell script, `Uninstall-Application.ps1`, allows you to uninstall a s
    Use `cd` command to navigate to the directory where you saved the script.
 
 4. **Run the Script**:
-   Execute the script with the desired application name. For example, to uninstall "MicrosoftTeams", run:
+   Execute the script with the exact application name. For example, to uninstall "MicrosoftTeams", run:
    ```powershell
    .\Uninstall-Application.ps1 -AppName "MicrosoftTeams"
    ```
@@ -30,11 +31,6 @@ This PowerShell script, `Uninstall-Application.ps1`, allows you to uninstall a s
 - Ensure you have PowerShell 5.0 or later.
 - Run PowerShell with administrative privileges to allow the script to uninstall applications.
 
-### Notes:
-- **Silent Uninstallation**: The script attempts silent uninstallation for better automation. If silent uninstallation fails, it falls back to a normal uninstallation.
-- **Multiple Instances**: The script handles multiple instances of the application and uninstalls each one found.
-- **Log Directory**: If the `C:\temp` directory does not exist, the script will create it along with the log file.
-
 ### Example:
 To uninstall "Teams Machine-Wide Installer", you would run:
 ```powershell
@@ -43,3 +39,7 @@ To uninstall "Teams Machine-Wide Installer", you would run:
 
 ### Verification:
 Use in conjunction with `queryApplicationInventory` in this repository to verify the correct application name before running the uninstallation script.
+
+### Notes:
+- **Silent Uninstallation**: The script attempts silent uninstallation for better automation.
+- **Log Directory**: If the `C:\temp` directory does not exist, the script will create it along with the log file.
