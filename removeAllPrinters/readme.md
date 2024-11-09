@@ -1,4 +1,4 @@
-# Comprehensive Documentation for Printer Removal Script
+# Documentation for removeAllPrinterInstances.ps1
 
 ---
 
